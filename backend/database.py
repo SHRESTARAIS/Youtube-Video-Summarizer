@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 
-# SQLite database (you can change to PostgreSQL later)
+# SQLite database
 SQLALCHEMY_DATABASE_URL = "sqlite:///./summarizer.db"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
@@ -37,5 +37,31 @@ def get_db():
     db = SessionLocal()
     try:
         yield db
+    finally:
+        db.close()
+
+def get_user_by_email(email: str):
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.email == email).first()
+        return user
+    finally:
+        db.close()
+
+def create_user(username: str, email: str, hashed_password: str):
+    db = SessionLocal()
+    try:
+        user = User(
+            username=username,
+            email=email, 
+            hashed_password=hashed_password
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user
+    except Exception as e:
+        db.rollback()
+        raise e
     finally:
         db.close()

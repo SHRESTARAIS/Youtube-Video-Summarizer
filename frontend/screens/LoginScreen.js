@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { TextInput, Button, Card, Title } from 'react-native-paper';
 import api from '../config/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -37,9 +38,9 @@ const LoginScreen = ({ navigation }) => {
         const response = await api.post('/login', { email, password });
         const { access_token, username } = response.data;
         
-        // Store token (in real app, use secure storage)
-        localStorage.setItem('authToken', access_token);
-        localStorage.setItem('username', username);
+        // Store token using AsyncStorage
+        await AsyncStorage.setItem('authToken', access_token);
+        await AsyncStorage.setItem('username', username);
         
         Alert.alert('Success', 'Login successful!');
         navigation.navigate('Home');
@@ -137,6 +138,10 @@ const styles = StyleSheet.create({
   card: {
     padding: 10,
     elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   title: {
     textAlign: 'center',

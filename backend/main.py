@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 import time
+from auth import create_access_token, verify_password, get_password_hash
+from database import get_user_by_email, create_user
 
 app = FastAPI(
     title="YouTube Video Summarizer",
@@ -11,7 +13,7 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# CORS middleware for React Native app
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,6 +24,15 @@ app.add_middleware(
 class SummaryRequest(BaseModel):
     video_url: str
     language: str = "english"
+
+class UserRegister(BaseModel):
+    username: str
+    email: str
+    password: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
 
 # YouTube download function
 def download_youtube_video(video_url: str):
@@ -35,10 +46,8 @@ def download_youtube_video(video_url: str):
         if not audio_stream:
             return {"success": False, "error": "No audio stream found"}
         
-        # Create downloads directory
         os.makedirs("downloads", exist_ok=True)
         
-        # Download audio
         timestamp = int(time.time())
         filename = f"audio_{timestamp}"
         output_path = audio_stream.download(
@@ -58,17 +67,7 @@ def download_youtube_video(video_url: str):
 
 @app.get("/")
 def home():
-    return {
-        "message": "🚀 YouTube Summarizer API is running!",
-        "status": "active", 
-        "version": "2.0.0",
-        "endpoints": {
-            "home": "/",
-            "test": "/test", 
-            "languages": "/languages",
-            "summarize": "/summarize (POST)"
-        }
-    }
+    return {"message": "🚀 YouTube Summarizer API is running!"}
 
 @app.get("/test")
 def test():
@@ -79,35 +78,19 @@ def get_languages():
     return {
         "languages": [
             "english", "hindi", "bengali", "telugu", "tamil", 
-            "gujarati", "kannada", "malayalam", "punjabi", "urdu",
-            "spanish", "french", "german", "italian", "portuguese",
-            "russian", "japanese", "korean", "chinese", "arabic"
+            "gujarati", "kannada", "malayalam", "punjabi", "urdu"
         ]
     }
 
 @app.post("/summarize")
 async def summarize_video(request: SummaryRequest):
     try:
-        print(f"🎬 Processing request: {request.video_url} in {request.language}")
+        print(f"🎬 Processing: {request.video_url} in {request.language}")
         
-        # Step 1: Download YouTube audio
         download_result = download_youtube_video(request.video_url)
         
         if not download_result["success"]:
             raise HTTPException(status_code=400, detail=download_result["error"])
-        
-        # Step 2: Create demo transcript and summary
-        demo_transcript = f"""
-        This is a demo transcript for the video: {download_result['video_title']}
-        
-        In the full version, this would be generated using OpenAI Whisper speech-to-text.
-        The audio has been successfully downloaded and is ready for processing.
-        
-        Video Details:
-        - Title: {download_result['video_title']}
-        - Duration: {download_result['duration']} seconds
-        - Audio File: {download_result['file_path']}
-        """
         
         demo_summary = f"""
         🎯 **AI Summary** - {download_result['video_title']}
@@ -115,25 +98,7 @@ async def summarize_video(request: SummaryRequest):
         🌐 **Language**: {request.language}
         ⏱️ **Duration**: {download_result['duration']} seconds
         
-        📝 **Key Points**:
-        • This is a demonstration of the YouTube Video Summarizer
-        • The backend successfully downloaded the YouTube audio
-        • The system is ready for AI transcription and summarization
-        • Multiple language support is implemented
-        • Cross-platform React Native app is ready
-        
-        ✅ **Technical Status**:
-        • YouTube Download: ✅ Working
-        • Backend API: ✅ Running  
-        • CORS Setup: ✅ Enabled
-        • Language Support: ✅ 20+ Languages
-        • Frontend Ready: ✅ React Native
-        
-        🚀 **Next Features**:
-        • OpenAI Whisper integration for transcription
-        • Hugging Face models for summarization
-        • Real-time progress updates
-        • User authentication system
+        This is a demo summary. In production, AI would generate real summaries.
         """
         
         return {
@@ -141,18 +106,48 @@ async def summarize_video(request: SummaryRequest):
             "summary": demo_summary,
             "language": request.language,
             "video_title": download_result["video_title"],
-            "duration": download_result["duration"],
-            "transcript_length": len(demo_transcript),
-            "summary_length": len(demo_summary),
-            "message": "✅ YouTube processing successful! Ready for AI integration."
+            "duration": download_result["duration"]
         }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
 
+# Authentication endpoints
+@app.post("/api/register")
+async def register(user_data: UserRegister):
+    try:
+        # Check if user exists
+        existing_user = get_user_by_email(user_data.email)
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        
+        # Create user
+        create_user(user_data.username, user_data.email, get_password_hash(user_data.password))
+        return {"message": "User created successfully"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/login")
+async def login(user_data: UserLogin):
+    try:
+        user = get_user_by_email(user_data.email)
+        if not user or not verify_password(user_data.password, user.hashed_password):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+        # Create token
+        access_token = create_access_token(data={"sub": user.email})
+        return {
+            "access_token": access_token, 
+            "token_type": "bearer",
+            "username": user.username
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
-    print("🚀 Starting Enhanced YouTube Summarizer API...")
-    print("📍 API URL: http://localhost:8000")
-    print("📚 Documentation: http://localhost:8000/docs")
-    print("🌐 CORS Enabled: Ready for React Native frontend")
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    print("🚀 Starting YouTube Summarizer API...")
+    print("📍 http://localhost:8000")
+    print("📚 http://localhost:8000/docs")
+    uvicorn.run(app, host="0.0.0.0", port=8000)
