@@ -35,7 +35,7 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleSummarize = async () => {
-    if (!videoUrl) {
+    if (!videoUrl.trim()) {
       Alert.alert('Error', 'Please enter a YouTube URL');
       return;
     }
@@ -93,6 +93,10 @@ const HomeScreen = ({ navigation }) => {
             style={styles.input}
             mode="outlined"
             placeholder="Paste YouTube URL here"
+            outlineColor="#007AFF"
+            activeOutlineColor="#007AFF"
+            editable={true}
+            selectTextOnFocus={true}
           />
 
           <Text style={styles.label}>Select Output Language:</Text>
@@ -101,6 +105,7 @@ const HomeScreen = ({ navigation }) => {
             mode="outlined"
             onPress={() => setModalVisible(true)}
             style={styles.languageButton}
+            labelStyle={styles.languageButtonLabel}
           >
             {language.charAt(0).toUpperCase() + language.slice(1)}
           </Button>
@@ -117,8 +122,9 @@ const HomeScreen = ({ navigation }) => {
             mode="contained"
             onPress={handleSummarize}
             loading={loading}
-            disabled={loading}
+            disabled={loading || !videoUrl.trim()}
             style={styles.button}
+            labelStyle={styles.buttonLabel}
             icon="video"
           >
             {loading ? 'Processing...' : 'Generate Summary'}
@@ -153,45 +159,63 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 15,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#FFFFFF',
   },
   title: {
     textAlign: 'center',
     marginVertical: 20,
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#007AFF',
   },
   card: {
     marginBottom: 20,
-    elevation: 4,
+    elevation: 8,
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    backgroundColor: '#FFFFFF',
   },
   input: {
     marginBottom: 15,
+    backgroundColor: '#F8F9FA',
   },
   label: {
     fontSize: 16,
     marginBottom: 10,
     fontWeight: '600',
-    color: '#333',
+    color: '#007AFF',
   },
   languageButton: {
     marginBottom: 20,
-    borderColor: '#6200ee',
+    borderColor: '#007AFF',
+    borderWidth: 1,
+  },
+  languageButtonLabel: {
+    color: '#007AFF',
   },
   button: {
     marginVertical: 10,
-    padding: 5,
-    backgroundColor: '#6200ee',
+    padding: 8,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+  },
+  buttonLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   infoCard: {
     marginTop: 20,
-    backgroundColor: '#e3f2fd',
+    backgroundColor: '#E3F2FD',
+    borderColor: '#007AFF',
+    borderWidth: 1,
   },
   infoTitle: {
     fontSize: 18,
     marginBottom: 10,
-    color: '#1565c0',
+    color: '#007AFF',
+    fontWeight: 'bold',
   },
   infoText: {
     fontSize: 14,

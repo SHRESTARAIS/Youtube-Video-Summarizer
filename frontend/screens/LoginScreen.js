@@ -21,39 +21,18 @@ const LoginScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
 
   const handleAuth = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill all fields');
-      return;
-    }
-
-    if (!isLogin && !username) {
-      Alert.alert('Error', 'Please enter username');
-      return;
-    }
-
-    setLoading(true);
+    // Temporary bypass - skip API calls
+    console.log('Bypassing authentication for demo');
+    
     try {
-      if (isLogin) {
-        // Login
-        const response = await api.post('/login', { email, password });
-        const { access_token, username } = response.data;
-        
-        // Store token using AsyncStorage
-        await AsyncStorage.setItem('authToken', access_token);
-        await AsyncStorage.setItem('username', username);
-        
-        Alert.alert('Success', 'Login successful!');
-        navigation.navigate('Home');
-      } else {
-        // Register
-        await api.post('/register', { email, password, username });
-        Alert.alert('Success', 'Registration successful! Please login.');
-        setIsLogin(true);
-      }
+      // Store demo user data directly
+      await AsyncStorage.setItem('username', 'DemoUser');
+      await AsyncStorage.setItem('authToken', 'demo-token-123');
+      
+      Alert.alert('Success', 'Welcome to YouTube Summarizer!');
+      navigation.navigate('HomeScreen');
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.detail || 'Something went wrong');
-    } finally {
-      setLoading(false);
+      Alert.alert('Error', 'Failed to login');
     }
   };
 
@@ -76,6 +55,8 @@ const LoginScreen = ({ navigation }) => {
                 onChangeText={setUsername}
                 style={styles.input}
                 mode="outlined"
+                outlineColor="#007AFF"
+                activeOutlineColor="#007AFF"
               />
             )}
             
@@ -87,6 +68,8 @@ const LoginScreen = ({ navigation }) => {
               mode="outlined"
               keyboardType="email-address"
               autoCapitalize="none"
+              outlineColor="#007AFF"
+              activeOutlineColor="#007AFF"
             />
             
             <TextInput
@@ -96,6 +79,8 @@ const LoginScreen = ({ navigation }) => {
               style={styles.input}
               mode="outlined"
               secureTextEntry
+              outlineColor="#007AFF"
+              activeOutlineColor="#007AFF"
             />
             
             <Button
@@ -104,6 +89,7 @@ const LoginScreen = ({ navigation }) => {
               loading={loading}
               disabled={loading}
               style={styles.button}
+              labelStyle={styles.buttonLabel}
             >
               {isLogin ? 'Login' : 'Register'}
             </Button>
@@ -128,7 +114,7 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#FFFFFF',
   },
   scrollContainer: {
     flexGrow: 1,
@@ -137,31 +123,42 @@ const styles = StyleSheet.create({
   },
   card: {
     padding: 10,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    elevation: 8,
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 8,
+    backgroundColor: '#FFFFFF',
   },
   title: {
     textAlign: 'center',
-    marginBottom: 20,
-    fontSize: 24,
+    marginBottom: 25,
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#007AFF',
   },
   input: {
-    marginBottom: 15,
+    marginBottom: 18,
+    backgroundColor: '#F8F9FA',
   },
   button: {
-    marginTop: 10,
-    padding: 5,
+    marginTop: 15,
+    padding: 8,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+  },
+  buttonLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   switchContainer: {
-    marginTop: 20,
+    marginTop: 25,
     alignItems: 'center',
   },
   switchText: {
-    color: '#6200ee',
+    color: '#007AFF',
     fontSize: 16,
+    fontWeight: '600',
   },
 });
 
