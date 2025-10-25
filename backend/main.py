@@ -7,6 +7,12 @@ import time
 from auth import create_access_token, verify_password, get_password_hash
 from database import get_user_by_email, create_user
 
+# Import your services
+from services.youtube_downloader import download_audio
+from services.speech_to_text import transcribe_audio
+from services.summarizer import summarize_text
+from services.translator import translate_text
+
 app = FastAPI(
     title="YouTube Video Summarizer",
     description="AI-powered YouTube video summarization in multiple languages",
@@ -34,94 +40,116 @@ class UserLogin(BaseModel):
     email: str
     password: str
 
-# YouTube download function
-def download_youtube_video(video_url: str):
-    try:
-        from pytubefix import YouTube
-        print(f"📥 Downloading: {video_url}")
-        
-        yt = YouTube(video_url)
-        audio_stream = yt.streams.filter(only_audio=True).first()
-        
-        if not audio_stream:
-            return {"success": False, "error": "No audio stream found"}
-        
-        os.makedirs("downloads", exist_ok=True)
-        
-        timestamp = int(time.time())
-        filename = f"audio_{timestamp}"
-        output_path = audio_stream.download(
-            output_path="downloads",
-            filename=filename
-        )
-        
-        return {
-            "success": True, 
-            "file_path": output_path,
-            "video_title": yt.title,
-            "duration": yt.length
-        }
-        
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+# Enhanced language support
+SUPPORTED_LANGUAGES = {
+    # Indian Languages
+    "hindi": "Hindi", "bengali": "Bengali", "telugu": "Telugu", "tamil": "Tamil",
+    "gujarati": "Gujarati", "kannada": "Kannada", "malayalam": "Malayalam", 
+    "punjabi": "Punjabi", "urdu": "Urdu", "marathi": "Marathi", "odia": "Odia",
+    
+    # Asian Languages
+    "chinese": "Chinese", "japanese": "Japanese", "korean": "Korean",
+    "vietnamese": "Vietnamese", "thai": "Thai", "indonesian": "Indonesian",
+    
+    # European Languages
+    "english": "English", "spanish": "Spanish", "french": "French", 
+    "german": "German", "italian": "Italian", "portuguese": "Portuguese",
+    "russian": "Russian", "dutch": "Dutch", "polish": "Polish",
+    
+    # Middle Eastern
+    "arabic": "Arabic", "turkish": "Turkish", "hebrew": "Hebrew",
+    
+    # Others
+    "filipino": "Filipino", "swahili": "Swahili"
+}
 
 @app.get("/")
 def home():
     return {"message": "🚀 YouTube Summarizer API is running!"}
 
-@app.get("/test")
+@app.get("/api/test")
 def test():
     return {"message": "✅ API is working perfectly!"}
 
-@app.get("/languages")
+@app.get("/api/languages")
 def get_languages():
-    return {
-        "languages": [
-            "english", "hindi", "bengali", "telugu", "tamil", 
-            "gujarati", "kannada", "malayalam", "punjabi", "urdu"
-        ]
-    }
+    return {"languages": list(SUPPORTED_LANGUAGES.keys())}
 
-@app.post("/summarize")
+@app.post("/api/summarize")
 async def summarize_video(request: SummaryRequest):
     try:
         print(f"🎬 Processing: {request.video_url} in {request.language}")
         
-        download_result = download_youtube_video(request.video_url)
+        # Validate language
+        if request.language not in SUPPORTED_LANGUAGES:
+            raise HTTPException(status_code=400, detail="Language not supported")
         
-        if not download_result["success"]:
-            raise HTTPException(status_code=400, detail=download_result["error"])
+        # Step 1: Download YouTube audio
+        print("📥 Downloading audio...")
+        from services.youtube_downloader import download_audio
+        audio_path = download_audio(request.video_url)
         
-        demo_summary = f"""
-        🎯 **AI Summary** - {download_result['video_title']}
+        # Step 2: Get video info for demo
+        import yt_dlp
+        ydl_opts = {'quiet': True}
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(request.video_url, download=False)
+            video_title = info.get('title', 'Unknown Title')
+            duration = info.get('duration', 0)
         
-        🌐 **Language**: {request.language}
-        ⏱️ **Duration**: {download_result['duration']} seconds
+        # Step 3: Generate meaningful demo summary
+        from services.summarizer import summarize_text
+        from services.translator import translate_text
         
-        This is a demo summary. In production, AI would generate real summaries.
+        demo_transcript = f"""
+        This video titled '{video_title}' has a duration of {duration} seconds.
+        The content appears to be about technology and AI based on the metadata.
+        In a production environment, this would be real transcribed audio content
+        from the YouTube video, processed through speech recognition and AI summarization.
         """
+        
+        # Step 4: Generate summary
+        print("📝 Generating summary...")
+        english_summary = summarize_text(demo_transcript)
+        
+        # Step 5: Translate if needed
+        final_summary = english_summary
+        if request.language != "english":
+            print(f"🌐 Translating to {request.language}...")
+            final_summary = translate_text(english_summary, request.language)
+        
+        # Clean up audio file
+        try:
+            import os
+            if os.path.exists(audio_path):
+                os.remove(audio_path)
+        except:
+            pass
         
         return {
             "success": True,
-            "summary": demo_summary,
+            "summary": final_summary,
             "language": request.language,
-            "video_title": download_result["video_title"],
-            "duration": download_result["duration"]
+            "video_title": video_title,
+            "duration": duration,
+            "note": "This is a demo. Add AI APIs for real summaries."
         }
         
     except Exception as e:
+        # Clean up on error
+        try:
+            if 'audio_path' in locals() and audio_path and os.path.exists(audio_path):
+                os.remove(audio_path)
+        except:
+            pass
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
-
-# Authentication endpoints
 @app.post("/api/register")
 async def register(user_data: UserRegister):
     try:
-        # Check if user exists
         existing_user = get_user_by_email(user_data.email)
         if existing_user:
             raise HTTPException(status_code=400, detail="Email already registered")
         
-        # Create user
         create_user(user_data.username, user_data.email, get_password_hash(user_data.password))
         return {"message": "User created successfully"}
         
@@ -135,7 +163,6 @@ async def login(user_data: UserLogin):
         if not user or not verify_password(user_data.password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Invalid credentials")
         
-        # Create token
         access_token = create_access_token(data={"sub": user.email})
         return {
             "access_token": access_token, 
@@ -145,6 +172,21 @@ async def login(user_data: UserLogin):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/history")
+async def get_history():
+    return {
+        "history": [
+            {
+                "id": 1,
+                "title": "Sample Video",
+                "url": "https://youtube.com/watch?v=demo",
+                "summary": "This is a sample summary",
+                "date": "2024-01-01",
+                "language": "english"
+            }
+        ]
+    }
 
 if __name__ == "__main__":
     print("🚀 Starting YouTube Summarizer API...")

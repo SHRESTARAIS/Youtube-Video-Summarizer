@@ -4,18 +4,17 @@ uvicorn==0.24.0
 python-multipart==0.0.6
 
 # YouTube Download
-pytubefix==10.0.1
+yt-dlp==2023.11.14
 
 # Web Requests
 requests==2.31.0
 
 # Translation
-googletrans==4.0.0-rc1
+googletrans==3.1.0a0
 
 # Authentication
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
-python-multipart==0.0.6
 
 # Database
 sqlalchemy==1.4.46
@@ -24,8 +23,7 @@ databases[sqlite]==0.7.0
 # Utilities
 pydantic==1.10.12
 aiofiles==23.2.1
+python-dotenv==1.0.0
 
-# AI - OPTIONAL (try these after core works)
-# openai-whisper==20231117
-# transformers==4.35.2
-# torch==2.1.2 --index-url https://download.pytorch.org/whl/cpu
+# File processing
+mutagen==1.47.0

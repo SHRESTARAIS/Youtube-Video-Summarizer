@@ -4,33 +4,28 @@ import time
 
 def download_audio(video_url: str) -> str:
     """
-    Download audio from YouTube video using yt-dlp
-    Why yt-dlp? It's more reliable than pytube and handles various YouTube formats better
+    Download audio from YouTube video - Production Ready
     """
     try:
-        print(f"🎬 Processing YouTube URL: {video_url}")
+        print(f"📥 Processing: {video_url}")
         
         # Create downloads directory
         os.makedirs("downloads", exist_ok=True)
         
-        # Configure yt-dlp options
+        # Configure yt-dlp for optimal performance
         ydl_opts = {
             'format': 'bestaudio/best',
-            'outtmpl': 'downloads/audio_%(id)s_%(timestamp)s',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            }],
+            'outtmpl': 'downloads/%(id)s_%(title)s.%(ext)s',
+            'quiet': False,
+            'no_warnings': False,
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=True)
-            audio_filename = ydl.prepare_filename(info)
-            audio_path = audio_filename.replace('.webm', '.mp3').replace('.m4a', '.mp3')
+            audio_path = ydl.prepare_filename(info)
             
-        print(f"✅ Audio downloaded: {audio_path}")
+        print(f"✅ Download completed: {audio_path}")
         return audio_path
         
     except Exception as e:
-        raise Exception(f"YouTube download failed: {str(e)}")
+        raise Exception(f"Video processing error: {str(e)}")
