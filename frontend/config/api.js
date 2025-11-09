@@ -1,5 +1,5 @@
 const api = {
-  baseUrl: 'http://127.0.0.1:5000', // or your backend URL
+  baseUrl: "https://youtube-video-summarizer-backend-fcq1.onrender.com", 
 };
 
 export default api;
